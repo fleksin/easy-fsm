@@ -1,0 +1,22 @@
+{
+  "name": "easy-fsm",
+  "version": "1.0.0",
+  "description": "Took a stab at fsm. An implementation for a super mini fsm (finite state machine)",
+  "main": "lib/easyFsm.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fleksin/easy-fsm.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/fleksin/easy-fsm/issues"
+  },
+  "homepage": "https://github.com/fleksin/easy-fsm#readme"
+}

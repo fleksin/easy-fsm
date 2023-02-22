@@ -4,20 +4,20 @@ interface Transition<TransitionName extends string, StateName extends string> {
   to: StateName | string;
 }
 
-type StateAction<TransitionName extends string> = (ctx) => TransitionName | string | void | undefined;
+type StateAction<TransitionName extends string> = (ctx: any) => TransitionName | string | void | undefined;
 
 interface StateActions<T extends string> {
   [stateName: string]: StateAction<T>;
 }
 
 export class EasyFsm<TransitionName extends string, StateName extends string> {
-  state = "none";
+  state: StateName | string = "none";
   transitions = [];
   stateSet = new Set();
   transitSet: {
     [name: string]: [StateName | string, StateName | string];
   } = {};
-  stateActions = {};
+  stateActions: StateActions<TransitionName> = {};
   ctx = {};
   constructor({
     transitions = [],
@@ -34,7 +34,7 @@ export class EasyFsm<TransitionName extends string, StateName extends string> {
     this.stateActions = stateActions;
   }
 
-  async init(state) {
+  async init(state: StateName) {
     this.state = state;
     this.invokeStateAction();
   }
@@ -46,7 +46,7 @@ export class EasyFsm<TransitionName extends string, StateName extends string> {
     }
   }
 
-  transit = async (transitionName) => {
+  transit = async (transitionName: TransitionName | string) => {
     const transition = this.transitSet[transitionName];
     if (!transition) {
       throw `transition ${transitionName} not valid !!!`;

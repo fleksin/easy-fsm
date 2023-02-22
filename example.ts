@@ -1,4 +1,4 @@
-import { EasyFsm } from "./easyFsm";
+import { EasyFsm } from "./src/easyFsm";
 
 enum Transits {
   transit1 = "transit1",
