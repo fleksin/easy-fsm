@@ -20,7 +20,7 @@ const fsm = new EasyFsm<Transits, States>({
   ],
   stateActions: {
     [States.state1]: function (ctx) {
-      // return Transits.transit1
+      return Transits.transit1
     }
   }
 });
