@@ -4,9 +4,14 @@ interface Transition<TransitionName extends nameish, StateName extends nameish> 
   to: StateName | string;
 }
 
-type nameish = string | number;
+// disallow number to be name, because it would be messy for debugging state/transitions
+type nameish = string;
 
-type StateAction<TransitionName extends nameish> = (ctx: any) => TransitionName | string | void | undefined;
+type StateAction<TransitionName extends nameish> = (
+  ctx: any
+) =>
+  | (TransitionName | string | void | undefined)
+  | Promise<TransitionName | string | void | undefined>;
 
 interface StateActions<T extends nameish> {
   [stateName: string]: StateAction<T>;
