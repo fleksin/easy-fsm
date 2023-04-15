@@ -1,16 +1,18 @@
-interface Transition<TransitionName extends string, StateName extends string> {
+interface Transition<TransitionName extends nameish, StateName extends string> {
   name: TransitionName | string;
   from: StateName | string;
   to: StateName | string;
 }
 
-type StateAction<TransitionName extends string> = (ctx: any) => TransitionName | string | void | undefined;
+type nameish = string | number;
 
-interface StateActions<T extends string> {
+type StateAction<TransitionName extends nameish> = (ctx: any) => TransitionName | string | void | undefined;
+
+interface StateActions<T extends nameish> {
   [stateName: string]: StateAction<T>;
 }
 
-export class EasyFsm<TransitionName extends string, StateName extends string> {
+export class EasyFsm<TransitionName extends nameish, StateName extends string> {
   state: StateName | string = "none";
   transitions = [];
   stateSet = new Set();
