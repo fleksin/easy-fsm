@@ -1,4 +1,4 @@
-interface Transition<TransitionName extends nameish, StateName extends string> {
+interface Transition<TransitionName extends nameish, StateName extends nameish> {
   name: TransitionName | string;
   from: StateName | string;
   to: StateName | string;
@@ -12,7 +12,7 @@ interface StateActions<T extends nameish> {
   [stateName: string]: StateAction<T>;
 }
 
-export class EasyFsm<TransitionName extends nameish, StateName extends string> {
+export class EasyFsm<TransitionName extends nameish, StateName extends nameish> {
   state: StateName | string = "none";
   transitions = [];
   stateSet = new Set();
