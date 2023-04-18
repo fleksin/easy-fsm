@@ -7,31 +7,43 @@ interface Transition<TransitionName extends nameish, StateName extends nameish> 
 // disallow number to be name, because it would be messy for debugging state/transitions
 type nameish = string;
 
-type StateAction<TransitionName extends nameish> = (
-  ctx: any
-) =>
-  | (TransitionName | string | void | undefined)
-  | Promise<TransitionName | string | void | undefined>;
+type StateActionRet<TransitionName> = TransitionName | string | void | undefined | boolean;
 
-interface StateActions<T extends nameish> {
-  [stateName: string]: StateAction<T>;
+type StateAction<TransitionName extends nameish, Ctx> = (
+  ctx: Ctx
+) =>
+  | StateActionRet<TransitionName>
+  | Promise<StateActionRet<TransitionName>>;
+
+interface StateActions<T extends nameish, Ctx> {
+  [stateName: string]: StateAction<T, Ctx>;
 }
 
-export class EasyFsm<TransitionName extends nameish, StateName extends nameish> {
+interface Log {
+  type: 'transition' | 'state-action';
+  name: string;
+}
+
+export class EasyFsm<
+  TransitionName extends nameish,
+  StateName extends nameish,
+  CtxType extends Record<string, any>
+> {
   state: StateName | string = "none";
   transitions = [];
   stateSet = new Set();
   transitSet: {
     [name: string]: [StateName | string, StateName | string];
   } = {};
-  stateActions: StateActions<TransitionName> = {};
-  ctx = {};
+  stateActions: StateActions<TransitionName, CtxType> = {};
+  ctx = {} as CtxType;
+  logs: Log[] = [];
   constructor({
     transitions = [],
     stateActions = {},
   }: {
     transitions?: Transition<TransitionName, StateName>[];
-    stateActions?: StateActions<TransitionName>;
+    stateActions?: StateActions<TransitionName, CtxType>;
   }) {
     transitions.forEach(({ name, from, to }) => {
       this.stateSet.add(from);
@@ -41,19 +53,33 @@ export class EasyFsm<TransitionName extends nameish, StateName extends nameish> 
     this.stateActions = stateActions;
   }
 
+  addLog(log: Log) {
+    const { type, name } = log;
+    console.log(`[${type}] `, name);
+    this.logs.push(log);
+  }
+
   async init(state: StateName) {
     this.state = state;
     this.invokeStateAction();
   }
 
   async invokeStateAction() {
+    this.addLog({
+      type: 'state-action',
+      name: this.state
+    })
     const next = await this.stateActions[this.state]?.(this.ctx);
-    if (next) {
+    if (typeof next === 'string') {
       this.transit(next);
     }
   }
 
   transit = async (transitionName: TransitionName | string) => {
+    this.addLog({
+      type: 'transition',
+      name: transitionName
+    })
     const transition = this.transitSet[transitionName];
     if (!transition) {
       throw `transition ${transitionName} not valid !!!`;

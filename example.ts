@@ -10,7 +10,7 @@ enum States {
   state2 = "state2",
 }
 
-const fsm = new EasyFsm<Transits, States>({
+const fsm = new EasyFsm<Transits, States, any>({
   transitions: [
     {
       name: Transits.transit1,
