@@ -38,6 +38,8 @@ export class EasyFsm<
   stateActions: StateActions<TransitionName, CtxType> = {};
   ctx = {} as CtxType;
   logs: Log[] = [];
+  enterStateCallbacks = {} as Record<StateName | string, () => void>;
+  leaveStateCallbacks = {} as Record<StateName | string, () => void>;
   constructor({
     transitions = [],
     stateActions = {},
@@ -66,20 +68,32 @@ export class EasyFsm<
 
   async invokeStateAction() {
     this.addLog({
-      type: 'state-action',
-      name: this.state
-    })
+      type: "state-action",
+      name: this.state,
+    });
+    const enterCb = this.enterStateCallbacks[this.state];
+    enterCb?.();
     const next = await this.stateActions[this.state]?.(this.ctx);
-    if (typeof next === 'string') {
+    const leaveCb = this.leaveStateCallbacks[this.state];
+    leaveCb?.();
+    if (typeof next === "string") {
       this.transit(next);
     }
   }
 
+  onEnterState(name: StateName, cb: () => void) {
+    this.enterStateCallbacks[name] = cb;
+  }
+
+  onLeaveState(name: StateName, cb: () => void) {
+    this.leaveStateCallbacks[name] = cb;
+  }
+
   transit = async (transitionName: TransitionName | string) => {
     this.addLog({
-      type: 'transition',
-      name: transitionName
-    })
+      type: "transition",
+      name: transitionName,
+    });
     const transition = this.transitSet[transitionName];
     if (!transition) {
       throw `transition ${transitionName} not valid !!!`;
