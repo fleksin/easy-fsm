@@ -1,4 +1,7 @@
-interface Transition<TransitionName extends nameish, StateName extends nameish> {
+interface Transition<
+  TransitionName extends nameish,
+  StateName extends nameish
+> {
   name: TransitionName | string;
   from: StateName | string;
   to: StateName | string;
@@ -7,20 +10,23 @@ interface Transition<TransitionName extends nameish, StateName extends nameish> 
 // disallow number to be name, because it would be messy for debugging state/transitions
 type nameish = string;
 
-type StateActionRet<TransitionName> = TransitionName | string | void | undefined | boolean;
+type StateActionRet<TransitionName> =
+  | TransitionName
+  | string
+  | void
+  | undefined
+  | boolean;
 
 type StateAction<TransitionName extends nameish, Ctx> = (
   ctx: Ctx
-) =>
-  | StateActionRet<TransitionName>
-  | Promise<StateActionRet<TransitionName>>;
+) => StateActionRet<TransitionName> | Promise<StateActionRet<TransitionName>>;
 
 interface StateActions<T extends nameish, Ctx> {
   [stateName: string]: StateAction<T, Ctx>;
 }
 
 interface Log {
-  type: 'transition' | 'state-action';
+  type: "transition" | "state-action";
   name: string;
 }
 
@@ -38,8 +44,22 @@ export class EasyFsm<
   stateActions: StateActions<TransitionName, CtxType> = {};
   ctx = {} as CtxType;
   logs: Log[] = [];
-  enterStateCallbacks = {} as Record<StateName | string, () => void>;
-  leaveStateCallbacks = {} as Record<StateName | string, () => void>;
+  enterStateCallbacks = {} as Record<
+    StateName | string,
+    (ctx: CtxType) => void
+  >;
+  leaveStateCallbacks = {} as Record<
+    StateName | string,
+    (ctx: CtxType) => void
+  >;
+  enterTransitCallbacks = {} as Record<
+    TransitionName | string,
+    (ctx: CtxType) => void
+  >;
+  leaveTransitCallbacks = {} as Record<
+    TransitionName | string,
+    (ctx: CtxType) => void
+  >;
   constructor({
     transitions = [],
     stateActions = {},
@@ -72,21 +92,29 @@ export class EasyFsm<
       name: this.state,
     });
     const enterCb = this.enterStateCallbacks[this.state];
-    enterCb?.();
+    enterCb?.(this.ctx);
     const next = await this.stateActions[this.state]?.(this.ctx);
     const leaveCb = this.leaveStateCallbacks[this.state];
-    leaveCb?.();
+    leaveCb?.(this.ctx);
     if (typeof next === "string") {
       this.transit(next);
     }
   }
 
-  onEnterState(name: StateName, cb: () => void) {
+  onEnterState(name: StateName, cb: (ctx: CtxType) => void) {
     this.enterStateCallbacks[name] = cb;
   }
 
-  onLeaveState(name: StateName, cb: () => void) {
+  onLeaveState(name: StateName, cb: (ctx: CtxType) => void) {
     this.leaveStateCallbacks[name] = cb;
+  }
+
+  onEnterTransit(name: TransitionName, cb: (ctx: CtxType) => void) {
+    this.enterTransitCallbacks[name] = cb;
+  }
+
+  onLeaveTransit(name: TransitionName, cb: (ctx: CtxType) => void) {
+    this.leaveTransitCallbacks[name] = cb;
   }
 
   transit = async (transitionName: TransitionName | string) => {
@@ -94,6 +122,8 @@ export class EasyFsm<
       type: "transition",
       name: transitionName,
     });
+    const enterCb = this.enterTransitCallbacks[transitionName];
+    enterCb?.(this.ctx);
     const transition = this.transitSet[transitionName];
     if (!transition) {
       throw `transition ${transitionName} not valid !!!`;
@@ -103,6 +133,8 @@ export class EasyFsm<
       throw `transition ${transitionName} cannot fire from state ${this.state}`;
     }
     this.state = to;
+    const leaveCb = this.leaveStateCallbacks[transitionName];
+    leaveCb?.(this.ctx);
     this.invokeStateAction();
   };
 }
