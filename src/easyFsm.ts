@@ -44,6 +44,7 @@ export class EasyFsm<
   stateActions: StateActions<TransitionName, CtxType> = {};
   ctx = {} as CtxType;
   logs: Log[] = [];
+  debugMode: boolean;
   enterStateCallbacks = {} as Record<
     StateName | string,
     (ctx: CtxType) => void
@@ -66,18 +67,19 @@ export class EasyFsm<
   }: {
     transitions?: Transition<TransitionName, StateName>[];
     stateActions?: StateActions<TransitionName, CtxType>;
-  }) {
+  }, debugMode: boolean = false) {
     transitions.forEach(({ name, from, to }) => {
       this.stateSet.add(from);
       this.stateSet.add(to);
       this.transitSet[name] = [from, to];
     });
     this.stateActions = stateActions;
+    this.debugMode = debugMode;
   }
 
   addLog(log: Log) {
     const { type, name } = log;
-    console.log(`[${type}] `, name);
+    if(this.debugMode) console.log(`[${type}] `, name);
     this.logs.push(log);
   }
 
