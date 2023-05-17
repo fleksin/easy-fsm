@@ -61,13 +61,16 @@ export class EasyFsm<
     TransitionName | string,
     (ctx: CtxType) => void
   >;
-  constructor({
-    transitions = [],
-    stateActions = {},
-  }: {
-    transitions?: Transition<TransitionName, StateName>[];
-    stateActions?: StateActions<TransitionName, CtxType>;
-  }, debugMode: boolean = false) {
+  constructor(
+    {
+      transitions = [],
+      stateActions = {},
+    }: {
+      transitions?: Transition<TransitionName, StateName>[];
+      stateActions?: StateActions<TransitionName, CtxType>;
+    },
+    debugMode: boolean = false
+  ) {
     transitions.forEach(({ name, from, to }) => {
       this.stateSet.add(from);
       this.stateSet.add(to);
@@ -79,7 +82,7 @@ export class EasyFsm<
 
   addLog(log: Log) {
     const { type, name } = log;
-    if(this.debugMode) console.log(`[${type}] `, name);
+    if (this.debugMode) console.log(`[${type}] `, name);
     this.logs.push(log);
   }
 
@@ -95,11 +98,19 @@ export class EasyFsm<
     });
     const enterCb = this.enterStateCallbacks[this.state];
     enterCb?.(this.ctx);
-    const next = await this.stateActions[this.state]?.(this.ctx);
+    const stateAction = this.stateActions[this.state];
+    const next = await stateAction?.(this.ctx);
     const leaveCb = this.leaveStateCallbacks[this.state];
     leaveCb?.(this.ctx);
-    if (typeof next === "string") {
-      this.transit(next);
+    if (typeof next === "string" && stateAction.name === this.state) {
+      /**
+       * when coming back from an async job, the state might already change,
+       * if so, fsm should not transit to next
+       * check if state changed by comparing stateAction.name with current state
+       */
+      queueMicrotask(() => {
+        this.transit(next);
+      });
     }
   }
 
@@ -137,6 +148,8 @@ export class EasyFsm<
     this.state = to;
     const leaveCb = this.leaveStateCallbacks[transitionName];
     leaveCb?.(this.ctx);
-    this.invokeStateAction();
+    queueMicrotask(() => {
+      this.invokeStateAction();
+    });
   };
 }
