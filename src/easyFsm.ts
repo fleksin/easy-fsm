@@ -100,7 +100,10 @@ export class EasyFsm<
     enterCb?.(this.ctx);
     const stateAction = this.stateActions[this.state];
     const next = await stateAction?.(this.ctx);
-    const leaveCb = this.leaveStateCallbacks[this.state];
+    if (stateAction && stateAction.name !== this.state) {
+      return;
+    }
+      const leaveCb = this.leaveStateCallbacks[this.state];
     leaveCb?.(this.ctx);
     if (typeof next === "string" && stateAction.name === this.state) {
       /**
