@@ -100,17 +100,17 @@ export class EasyFsm<
     enterCb?.(this.ctx);
     const stateAction = this.stateActions[this.state];
     const next = await stateAction?.(this.ctx);
+    /**
+     * when coming back from an async job, the state might already change,
+     * if so, fsm should not transit to next
+     * check if state changed by comparing stateAction.name with current state
+     */
     if (stateAction && stateAction.name !== this.state) {
       return;
     }
-      const leaveCb = this.leaveStateCallbacks[this.state];
+    const leaveCb = this.leaveStateCallbacks[this.state];
     leaveCb?.(this.ctx);
     if (typeof next === "string" && stateAction.name === this.state) {
-      /**
-       * when coming back from an async job, the state might already change,
-       * if so, fsm should not transit to next
-       * check if state changed by comparing stateAction.name with current state
-       */
       queueMicrotask(() => {
         this.transit(next);
       });
