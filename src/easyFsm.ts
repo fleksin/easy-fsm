@@ -1,3 +1,5 @@
+import EventEmitter from "events";
+
 interface Transition<
   TransitionName extends nameish,
   StateName extends nameish
@@ -45,22 +47,10 @@ export class EasyFsm<
   ctx = {} as CtxType;
   logs: Log[] = [];
   debugMode: boolean;
-  enterStateCallbacks = {} as Record<
-    StateName | string,
-    (ctx: CtxType) => void
-  >;
-  leaveStateCallbacks = {} as Record<
-    StateName | string,
-    (ctx: CtxType) => void
-  >;
-  enterTransitCallbacks = {} as Record<
-    TransitionName | string,
-    (ctx: CtxType) => void
-  >;
-  leaveTransitCallbacks = {} as Record<
-    TransitionName | string,
-    (ctx: CtxType) => void
-  >;
+  private onEnterStateEventsEmitter;
+  private onLeaveStateEventsEmitter;
+  private onEnterTransitEventsEmitter;
+  private onLeaveTransitEventsEmitter;
   constructor(
     {
       transitions = [],
@@ -78,6 +68,10 @@ export class EasyFsm<
     });
     this.stateActions = stateActions;
     this.debugMode = debugMode;
+    this.onEnterStateEventsEmitter = new EventEmitter();
+    this.onLeaveStateEventsEmitter = new EventEmitter();
+    this.onEnterTransitEventsEmitter = new EventEmitter();
+    this.onLeaveTransitEventsEmitter = new EventEmitter();
   }
 
   addLog(log: Log) {
@@ -96,8 +90,7 @@ export class EasyFsm<
       type: "state-action",
       name: this.state,
     });
-    const enterCb = this.enterStateCallbacks[this.state];
-    enterCb?.(this.ctx);
+    this.onEnterStateEventsEmitter.emit(this.state);
     const stateAction = this.stateActions[this.state];
     const next = await stateAction?.(this.ctx);
     /**
@@ -108,8 +101,7 @@ export class EasyFsm<
     if (stateAction && stateAction.name !== this.state) {
       return;
     }
-    const leaveCb = this.leaveStateCallbacks[this.state];
-    leaveCb?.(this.ctx);
+    this.onLeaveStateEventsEmitter.emit(this.state);
     if (typeof next === "string" && stateAction.name === this.state) {
       queueMicrotask(() => {
         this.transit(next);
@@ -118,19 +110,22 @@ export class EasyFsm<
   }
 
   onEnterState(name: StateName, cb: (ctx: CtxType) => void) {
-    this.enterStateCallbacks[name] = cb;
+    this.onEnterStateEventsEmitter.on(name, cb);
+  }
+  offEnterState(name: StateName, cb: (ctx: CtxType) => void) {
+    this.onEnterStateEventsEmitter.off(name, cb);
   }
 
   onLeaveState(name: StateName, cb: (ctx: CtxType) => void) {
-    this.leaveStateCallbacks[name] = cb;
+    this.onLeaveStateEventsEmitter.on(name, cb);
   }
 
   onEnterTransit(name: TransitionName, cb: (ctx: CtxType) => void) {
-    this.enterTransitCallbacks[name] = cb;
+    this.onEnterTransitEventsEmitter.on(name, cb);
   }
 
   onLeaveTransit(name: TransitionName, cb: (ctx: CtxType) => void) {
-    this.leaveTransitCallbacks[name] = cb;
+    this.onLeaveStateEventsEmitter.on(name, cb);
   }
 
   transit = async (transitionName: TransitionName | string) => {
@@ -138,8 +133,7 @@ export class EasyFsm<
       type: "transition",
       name: transitionName,
     });
-    const enterCb = this.enterTransitCallbacks[transitionName];
-    enterCb?.(this.ctx);
+    this.onEnterTransitEventsEmitter.emit(transitionName);
     const transition = this.transitSet[transitionName];
     if (!transition) {
       throw `transition ${transitionName} not valid !!!`;
@@ -149,8 +143,8 @@ export class EasyFsm<
       throw `transition ${transitionName} cannot fire from state ${this.state}`;
     }
     this.state = to;
-    const leaveCb = this.leaveStateCallbacks[transitionName];
-    leaveCb?.(this.ctx);
+    this.onLeaveTransitEventsEmitter.emit(transitionName);
+
     queueMicrotask(() => {
       this.invokeStateAction();
     });
